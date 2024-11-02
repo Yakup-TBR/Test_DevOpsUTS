@@ -17,7 +17,7 @@ jobs:
       BROADCAST_DRIVER: log
     services:
       mysql:
-        image: mysql:8.0
+        image: mysql:8.0  # Anda bisa menggunakan mysql:5.7 jika Anda lebih suka
         env:
           MYSQL_ALLOW_EMPTY_PASSWORD: false
           MYSQL_ROOT_PASSWORD: root
@@ -35,17 +35,21 @@ jobs:
         with:
           php-version: '8.0'
           extensions: mbstring, dom, fileinfo, mysql
-          coverage: xdebug
+          coverage: xdebug  # optional
 
-      - name: Check for composer.json
-        run: |
-          if [ ! -f composer.json ]; then
-            echo "composer.json not found!"
-            exit 1
-          fi
+      - name: Get composer cache directory
+        id: composer-cache
+        run: echo "::set-output name=dir::$(composer config cache-files-dir)"
+
+      - name: Cache composer dependencies
+        uses: actions/cache@v1
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+          restore-keys: ${{ runner.os }}-composer-
 
       - name: Install Composer dependencies
-        run: composer install --no-progress --prefer-dist --optimize-autoloader
+        run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
 
       - name: Prepare the application
         run: |
@@ -58,9 +62,9 @@ jobs:
       - name: Run Migration
         run: php artisan migrate -v
         env:
-          DB_PORT: 3306
+          DB_PORT: 3306  # Port MySQL yang digunakan
 
       - name: Test with phpunit
         run: vendor/bin/phpunit --coverage-text
         env:
-          DB_PORT: 3306
+          DB_PORT: 3306  # Port MySQL yang digunakan
