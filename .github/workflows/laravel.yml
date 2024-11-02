@@ -16,8 +16,6 @@ jobs:
         env:
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: inkostel
-          MYSQL_USER: root
-          MYSQL_PASSWORD: root
         options: >-
           --health-cmd="mysqladmin ping -h localhost -u root --password=root || exit 1" 
           --health-interval=10s 
