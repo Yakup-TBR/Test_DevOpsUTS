@@ -19,10 +19,10 @@ jobs:
           MYSQL_USER: root
           MYSQL_PASSWORD: root
         options: >-
-          --health-cmd="mysqladmin ping" 
+          --health-cmd="mysqladmin ping -h localhost -u root --password=root || exit 1" 
           --health-interval=10s 
           --health-timeout=5s 
-          --health-retries=3
+          --health-retries=10
         ports:
           - 3306:3306
 
@@ -46,9 +46,13 @@ jobs:
 
       - name: Wait for MySQL
         run: |
-          until mysqladmin ping -h127.0.0.1 -P3306 --silent; do
+          for i in {1..15}; do
+            if mysqladmin ping -h127.0.0.1 -P3306 --silent; then
+              echo "MySQL is ready!"
+              break
+            fi
             echo "Waiting for database connection..."
-            sleep 3
+            sleep 5
           done
 
       - name: Run Tests
