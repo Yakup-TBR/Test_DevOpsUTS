@@ -87,7 +87,6 @@ Route::get('/tolak/{id_kos}', [ValidationController::class, 'tolak'])->name('tol
 // ContactUs
 Route::get('/contactUs', function () {
     return view('contactUs');
-});
+})->name('contactUs');
 
-Route::get('/contact-us', [ContactController    ::class, 'index'])->name('contact.index');
 Route::post('/contact-us', [ContactController::class, 'store'])->name('contact.store');
