@@ -17,55 +17,64 @@ jobs:
       BROADCAST_DRIVER: log
     services:
       mysql:
-        image: mysql:8.0  # Anda bisa menggunakan mysql:5.7 jika Anda lebih suka
+        image: mysql:8.0  # Bisa diganti dengan mysql:5.7 jika diinginkan
         env:
-          MYSQL_ALLOW_EMPTY_PASSWORD: false
           MYSQL_ROOT_PASSWORD: root
           MYSQL_DATABASE: inkostel
         ports:
-          - 3306/tcp
-        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+          - 3306:3306
+        options: > 
+          --health-cmd="mysqladmin ping -h localhost --silent"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=3
+        # Mengganti opsi '--skip-host-cache' yang deprecated
 
     steps:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Setup PHP, with composer and extensions
+      - name: Setup PHP with Composer and Extensions
         uses: shivammathur/setup-php@v2
         with:
           php-version: '8.0'
           extensions: mbstring, dom, fileinfo, mysql
           coverage: xdebug  # optional
 
-      - name: Get composer cache directory
+      - name: Get Composer Cache Directory
         id: composer-cache
         run: echo "::set-output name=dir::$(composer config cache-files-dir)"
 
-      - name: Cache composer dependencies
+      - name: Cache Composer Dependencies
         uses: actions/cache@v1
         with:
           path: ${{ steps.composer-cache.outputs.dir }}
           key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
           restore-keys: ${{ runner.os }}-composer-
 
-      - name: Install Composer dependencies
+      - name: Install Composer Dependencies
         run: composer install --no-progress --no-suggest --prefer-dist --optimize-autoloader
         working-directory: ./Test_DevOpsUTS
 
-      - name: Prepare the application
+      - name: Prepare the Application
         run: |
-          php -r "file_exists('.env') || copy('.env.example', '.env');"
+          cp .env.example .env
           php artisan key:generate
+          php artisan config:cache
 
-      - name: Clear Config
-        run: php artisan config:clear
+      - name: Wait for MySQL to Be Ready
+        run: |
+          until mysqladmin ping -h "127.0.0.1" --silent; do
+            echo "Waiting for MySQL to be ready..."
+            sleep 2
+          done
 
       - name: Run Migration
-        run: php artisan migrate -v
+        run: php artisan migrate --force -v
         env:
-          DB_PORT: 3306  # Port MySQL yang digunakan
+          DB_PORT: 3306
 
-      - name: Test with phpunit
+      - name: Run Tests with PHPUnit
         run: vendor/bin/phpunit --coverage-text
         env:
-          DB_PORT: 3306  # Port MySQL yang digunakan
+          DB_PORT: 3306
